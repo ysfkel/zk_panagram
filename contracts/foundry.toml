@@ -1,0 +1,15 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.34" 
+ffi = true
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "forge-std=lib/forge-std/src"
+]
+
+[lint]
+ignore = ["lib/**", "src/Verifier.sol"]
+exclude_lints = ["mixed-case-variable"]
+

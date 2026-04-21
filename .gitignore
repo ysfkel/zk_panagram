@@ -1,0 +1,7 @@
+node_modules/
+circuit/target
+circuit/cmd.md
+contracts/cache/
+contracts/out/
+docs/
+.env
