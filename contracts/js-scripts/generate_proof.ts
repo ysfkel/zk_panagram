@@ -25,7 +25,7 @@ export default async function generateProof():  Promise<any> {
             // private input 
             guess_hash: inputsArray[0],
             // public input
-            answer_hash: inputsArray[1],
+            answer_double_hash: inputsArray[1],
             // 
             address: inputsArray[2] // the address of the user making the guess, passed as a public input to the circuit to prevent it from being optimized out during compilation
         }

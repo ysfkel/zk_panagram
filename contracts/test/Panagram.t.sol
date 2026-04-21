@@ -43,10 +43,13 @@ contract PanagramTest is Test {
     // - A deterministic field element representing the hash
     // - Guaranteed to be valid for Noir public input encoding 
  
-    bytes32 ANSWER = bytes32(uint256(keccak256("triangles")) % NOIR_FIELD_MODULUS);
-   // bytes32 constant ANSWER = bytes32(uint256(keccak256(abi.encodePacked(bytes32(uint256(keccak256("triangles")) % NOIR_FIELD_MODULUS)))) % NOIR_FIELD_MODULUS);
+    bytes32 ANSWER;
+    bytes32 CORRECT_GUESS;
 
     function setUp() public {
+
+        ANSWER = _getAnswerHash("triangles");
+        CORRECT_GUESS = _getGuessHash("triangles");
         // Deploy a mock verifier
         verifier = new HonkVerifier();
         // Deploy the Panagram contract with the mock verifier
@@ -57,21 +60,19 @@ contract PanagramTest is Test {
 
     function testCorrectGuessPasses() public {
         vm.prank(user);
-        bytes32 guess = ANSWER; // The guess is correct
-        bytes memory proof = _getProof(guess, ANSWER, user);
+        bytes memory proof = _getProof(CORRECT_GUESS, ANSWER, user);
         panagram.makeGuess(proof);
         vm.assertEq(panagram.balanceOf(user,0), 1);
         vm.assertEq(panagram.balanceOf(user,1), 0);
 
         vm.prank(user);
         vm.expectRevert();
-        panagram.makeGuess(proof); 
+        panagram.makeGuess(proof);  
     }
 
     function testSecondGuessPasses() public {
         vm.prank(user);
-        bytes32 guess = ANSWER; // The guess is correct
-        bytes memory proof = _getProof(guess, ANSWER, user);
+        bytes memory proof = _getProof(CORRECT_GUESS, ANSWER, user);
         panagram.makeGuess(proof);
         // only the first correct guesser gets the NFT with ID 0
         vm.assertEq(panagram.balanceOf(user,0), 1); 
@@ -81,7 +82,7 @@ contract PanagramTest is Test {
 
         // user 2
         address user2 = makeAddr("user2");
-        bytes memory proof2 = _getProof(guess, ANSWER, user2);
+        bytes memory proof2 = _getProof(CORRECT_GUESS, ANSWER, user2);
         vm.prank(user2);
         panagram.makeGuess(proof2); 
         //only the first correct guesser gets the NFT with ID 0
@@ -90,11 +91,9 @@ contract PanagramTest is Test {
         vm.assertEq(panagram.balanceOf(user2,1), 1); 
     }
 
-
     function testSubmitWrongProofExpectFail() public {
         vm.prank(user);
-        bytes32 guess = ANSWER; // The guess is correct
-        bytes memory proof = _getProof(guess, ANSWER, user);
+        bytes memory proof = _getProof(CORRECT_GUESS, ANSWER, user);
         panagram.makeGuess(proof);
         // only the first correct guesser gets the NFT with ID 0
         vm.assertEq(panagram.balanceOf(user,0), 1); 
@@ -112,15 +111,15 @@ contract PanagramTest is Test {
 
     function testStartNewRound() public {
         vm.prank(user);
-        bytes32 guess = ANSWER; // The guess is correct
-        bytes memory proof = _getProof(guess, ANSWER, user);
+
+        bytes memory proof = _getProof(CORRECT_GUESS, ANSWER, user);
         panagram.makeGuess(proof); 
         vm.assertEq(panagram.balanceOf(user,0), 1);  
         vm.assertEq(panagram.balanceOf(user,1), 0); 
         
         // new round
         vm.warp(panagram.MIN_DURATION() + 1);
-        bytes32 newAnswer = bytes32(uint256(keccak256("circles")) % NOIR_FIELD_MODULUS);
+        bytes32 newAnswer =bytes32(uint256(keccak256(abi.encodePacked(bytes32(uint256(keccak256("box")) % NOIR_FIELD_MODULUS)))) % NOIR_FIELD_MODULUS);
         panagram.newRound(newAnswer);
         vm.assertEq(panagram.currentRound(), 2);
         vm.assertEq(panagram.currentRoundWinner(), address(0));
@@ -138,7 +137,7 @@ contract PanagramTest is Test {
 
  
 
-    function _getProof(bytes32  guess , bytes32 answer, address user) internal returns (bytes memory _proof) { 
+    function _getProof(bytes32  guess , bytes32 answer, address player) internal returns (bytes memory _proof) { 
 
         uint256 NUM_ARGS = 6; // guess_hash and answer_hash
         string[] memory args = new string[](NUM_ARGS);
@@ -148,7 +147,7 @@ contract PanagramTest is Test {
         args[2] = "js-scripts/generate_proof.ts";
         args[3] = vm.toString(guess);
         args[4] = vm.toString(answer);
-        args[5] = vm.toString(user);
+        args[5] = vm.toString(player);
  
         bytes memory encodedProof = vm.ffi(args);
         _proof = abi.decode(encodedProof, (bytes));
@@ -156,4 +155,12 @@ contract PanagramTest is Test {
 
 
     }
+
+    function _getAnswerHash(bytes memory _answer) internal pure returns (bytes32) { 
+        return bytes32(uint256(keccak256(abi.encodePacked(bytes32(uint256(keccak256(_answer)) % NOIR_FIELD_MODULUS)))) % NOIR_FIELD_MODULUS);
+    }
+
+    function _getGuessHash(bytes memory _guess) internal pure returns (bytes32) { 
+        return bytes32(uint256(keccak256(_guess)) % NOIR_FIELD_MODULUS);
+     }
 }
